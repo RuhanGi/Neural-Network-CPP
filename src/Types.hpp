@@ -42,6 +42,7 @@ const double LR = 0.01;
 const int MAX_EPOCHS = 10000;
 const double EPSILON = 1e-8;
 const double TRAIN_RATIO = 0.8;
+const int BATCH_SIZE = 32;
 
 enum class Activation {
     SIGMOID,

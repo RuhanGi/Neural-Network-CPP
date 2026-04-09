@@ -117,6 +117,7 @@ Matrix Layer::backprop(Matrix errors)
                 grad += inputs[k][i] * delta[k][j];
             weights[i][j] -= LR * (grad / inputs.size());
         }
+
     Matrix prev_error(inputs.size(), Row(num_inputs, 0.0));
     for (size_t i = 0; i < inputs.size(); ++i)
         for (int j = 0; j < num_inputs; ++j)

@@ -23,7 +23,9 @@ int	main(int argc, char *argv[])
 		data.printStats();
 
 		NN net = NN(data);
-		net.addLayer(10, Activation::RELU);
+		// net.addLayer(10, Activation::RELU);
+		net.addLayer(16, Activation::RELU);
+		net.addLayer(8, Activation::RELU);
 		net.fit();
 	}
 	catch (std::exception & e)

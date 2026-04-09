@@ -23,7 +23,7 @@ private:
     std::vector<Layer> layers;
     void addOutputLayer();
     double calcLoss(Matrix preds, Matrix actual);
-    void epochPrint(size_t e, Matrix preds);
+    void epochPrint(size_t e);
 
 public:
     NN(const Dataset& data);

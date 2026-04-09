@@ -98,16 +98,18 @@ Matrix NN::backprop(Matrix passer)
 
 void NN::epochPrint(size_t e, Matrix preds)
 {
+    Matrix preds = forward(data.X);
+    Matrix valpreds = forward(data.valX);
     std::cout << GREY "Epoch [" << e << "\t"<< MAX_EPOCHS << "]";
     if (data.classif)
     {
         std::cout << GREY " | Train Acc: "  RED << getAccuracy(preds, data.Y);
-        std::cout << GREY " | Val Acc: " RED << getAccuracy(forward(data.valX), data.valY);
+        std::cout << GREY " | Val Acc: " RED << getAccuracy(valpreds, data.valY);
     }
     else
     {
         std::cout << GREY " | Train Loss: "  RED << calcLoss(preds, data.Y);
-        std::cout << GREY " | Val Loss: " RED << calcLoss(forward(data.valX), data.valY);
+        std::cout << GREY " | Val Loss: " RED << calcLoss(valpreds, data.valY);
     }
     std::cout << RESET "\r" << std::flush;
 }
@@ -119,20 +121,43 @@ void NN::fit()
     int patience = 10;
     int wait = 0;
     double bestValLoss = std::numeric_limits<double>::max();
+    // for (size_t e = 1; e <= MAX_EPOCHS; e++)
+    // {
+    //     Matrix preds = forward(data.X);
+    //     Matrix error = preds - data.Y;
+    //     backprop(error);
+    //     epochPrint(e, preds);
+
+    //     double currentValLoss = calcLoss(forward(data.valX), data.valY);
+    //     if (currentValLoss < bestValLoss) {
+    //         bestValLoss = currentValLoss;
+    //         wait = 0;
+    //     } else
+    //         wait++;
+        
+    //     if (wait >= patience)
+    //         break;
+    // }
     for (size_t e = 1; e <= MAX_EPOCHS; e++)
     {
-        Matrix preds = forward(data.X);
-        Matrix error = preds - data.Y;
-        backprop(error);
-        epochPrint(e, preds);
+        for (size_t i = 0; i < data.X.size(); i += BATCH_SIZE)
+        {
+            size_t end = std::min(i + BATCH_SIZE, data.X.size());
+            Matrix batchX(data.X.begin() + i, data.X.begin() + end);
+            Matrix batchY(data.Y.begin() + i, data.Y.begin() + end);
+            Matrix preds = forward(batchX);
+            Matrix error = preds - batchY;
+            backprop(error);
+        }
 
+        epochPrint(e);
         double currentValLoss = calcLoss(forward(data.valX), data.valY);
         if (currentValLoss < bestValLoss) {
             bestValLoss = currentValLoss;
             wait = 0;
         } else
             wait++;
-        
+    
         if (wait >= patience)
             break;
     }
