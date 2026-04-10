@@ -21,6 +21,7 @@ Layer::Layer(int num_inputs, int num_nodes, Activation actType)
     else
         limit = std::sqrt(6.0 / (num_inputs + num_nodes));
     weights = initMatrix(num_inputs+1, num_nodes, -limit, limit);
+    adam.init(num_inputs+1, num_nodes);
 }
 
 
@@ -104,10 +105,15 @@ double Layer::getDeriv(double a)
 
 Matrix Layer::backprop(Matrix errors)
 {
+    adam.t++;
+
     Matrix delta = errors;
     for (size_t i = 0; i < delta.size(); i++)
         for (size_t j = 0; j < delta[i].size(); j++)
             delta[i][j] *= getDeriv(z[i][j]);
+
+    double m_corr = 1.0 - std::pow(adam.beta1, adam.t);
+    double v_corr = 1.0 - std::pow(adam.beta2, adam.t);
 
     for (size_t i = 0; i < weights.size(); i++)
         for (size_t j = 0; j < weights[i].size(); j++)
@@ -115,13 +121,20 @@ Matrix Layer::backprop(Matrix errors)
             double grad = 0;
             for (size_t k = 0; k < inputs.size(); k++)
                 grad += inputs[k][i] * delta[k][j];
-            weights[i][j] -= LR * (grad / inputs.size());
+            grad /= inputs.size();
+    
+            adam.m[i][j] = adam.beta1 * adam.m[i][j] + (1.0 - adam.beta1) * grad;
+            adam.v[i][j] = adam.beta2 * adam.v[i][j] + (1.0 - adam.beta2) * (grad * grad);
+            double m_hat = adam.m[i][j] / m_corr;
+            double v_hat = adam.v[i][j] / v_corr;
+
+            weights[i][j] -= LR * m_hat / (std::sqrt(v_hat) + adam.eps);
         }
 
     Matrix prev_error(inputs.size(), Row(num_inputs, 0.0));
-    for (size_t i = 0; i < inputs.size(); ++i)
-        for (int j = 0; j < num_inputs; ++j)
-            for (int k = 0; k < num_nodes; ++k)
+    for (size_t i = 0; i < inputs.size(); i++)
+        for (int j = 0; j < num_inputs; j++)
+            for (int k = 0; k < num_nodes; k++)
                 prev_error[i][j] += delta[i][k] * weights[j][k];
     return prev_error;
 }

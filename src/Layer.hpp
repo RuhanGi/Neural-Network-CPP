@@ -21,6 +21,7 @@ class Layer {
 private:
     Matrix weights; // num_inputs+1  x  num_nodes
     Activation actType;
+    AdamParams adam;
     Matrix inputs;
     Matrix z;
     void act(Matrix &z);

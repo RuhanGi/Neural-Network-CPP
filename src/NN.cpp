@@ -12,13 +12,13 @@
 
 #include "NN.hpp"
 
-NN::NN(const Dataset& data) : data(data)
+NN::NN(Dataset& data) : data(data)
 {
 
 }
 
 
-double NN::calcLoss(Matrix preds, Matrix actual)
+double NN::calcLoss(const Matrix &preds, const Matrix &actual)
 {
     double totalLoss = 0.0;
     size_t n = preds.size();
@@ -54,13 +54,35 @@ int getIndexMax(const Row& row) {
     return std::distance(row.begin(), maxIt);
 }
 
-double getAccuracy(Matrix preds, Matrix actual)
+double getAccuracy(const Matrix &preds, const Matrix &actual)
 {
     int count = 0;
     for (size_t i = 0; i < preds.size(); i++)
         if (getIndexMax(preds[i]) == getIndexMax(actual[i]))
             count++;
     return (double) count / preds.size();
+}
+
+
+double rSqr(const Matrix& actual, const Matrix& pred)
+{
+	size_t n = actual.size();
+	if (n != pred.size())
+        throw std::invalid_argument("Difference in size");
+
+	double mean = 0;
+	for (size_t i = 0; i < n; i++)
+		mean += actual[i][0];
+	mean /= n;
+
+	double sumRes = 0;
+	double sumSqr = 0;
+	for (size_t i = 0; i < n; i++)
+	{
+		sumRes += std::pow(actual[i][0] - pred[i][0], 2);
+		sumSqr += std::pow(actual[i][0] - mean, 2);
+	}
+	return 1 - (sumRes / sumSqr);
 }
 
 
@@ -96,48 +118,80 @@ Matrix NN::backprop(Matrix passer)
     return passer;
 }
 
-void NN::epochPrint(size_t e, Matrix preds)
+void NN::epochPrint(size_t e, const t_metrics &m)
 {
-    Matrix preds = forward(data.X);
-    Matrix valpreds = forward(data.valX);
-    std::cout << GREY "Epoch [" << e << "\t"<< MAX_EPOCHS << "]";
+    std::cout << GREY "Epoch [" << e << "\t"<< MAX_EPOCHS << "]"
+              << GREY " | Train Loss: ["  RED << m.train_losses.back()
+              << GREY "] | Val Loss: [" RED << m.val_losses.back()
+              << GREY "]\r" << std::flush;
+}
+
+void NN::metricPrint(const t_metrics &m)
+{
     if (data.classif)
     {
-        std::cout << GREY " | Train Acc: "  RED << getAccuracy(preds, data.Y);
-        std::cout << GREY " | Val Acc: " RED << getAccuracy(valpreds, data.valY);
+        std::cout << GREY " Train Acc = "  GREEN << m.train_metrics.back()
+                  << GREY " | Val Acc = " GREEN << m.val_metrics.back();
     }
     else
     {
-        std::cout << GREY " | Train Loss: "  RED << calcLoss(preds, data.Y);
-        std::cout << GREY " | Val Loss: " RED << calcLoss(valpreds, data.valY);
+        std::cout << GREY " Train R^2 = "  GREEN << m.train_metrics.back()
+                  << GREY " | Val R^2 = " GREEN << m.val_metrics.back();
     }
-    std::cout << RESET "\r" << std::flush;
+    std::cout << std::string(80, ' ') << RESET "\n";
 }
 
-void NN::fit()
+void NN::calcMetrics(t_metrics& m)
+{
+    Matrix train_preds = forward(data.X);
+    Matrix val_preds = forward(data.valX);
+
+    m.train_losses.push_back(calcLoss(train_preds, data.Y));
+    m.val_losses.push_back(calcLoss(val_preds, data.valY));
+    if (m.classif)
+    {
+        m.train_metrics.push_back(getAccuracy(train_preds, data.Y));
+        m.val_metrics.push_back(getAccuracy(train_preds, data.Y));
+    }
+    else
+    {
+        m.train_metrics.push_back(rSqr(train_preds, data.Y));
+        m.val_metrics.push_back(rSqr(train_preds, data.Y));
+    }
+}
+
+
+void NN::setMetrics(t_metrics& m)
+{
+   m.val_preds = forward(data.valX);
+
+    if (m.classif)
+    {
+        int numClasses = data.valY[0].size();
+    
+        m.confus.assign(numClasses, std::vector<int>(numClasses, 0));
+        for (size_t i = 0; i < m.val_preds.size(); i++)
+            m.confus[getIndexMax(data.valY[i])][getIndexMax(m.val_preds[i])]++;
+    }
+    else
+    {
+        m.train_preds = forward(data.X);
+        m.train_truth = data.Y;
+        m.val_truth = data.X;
+    }
+}
+
+
+t_metrics   NN::fit()
 {
     addOutputLayer();
 
     int patience = 10;
     int wait = 0;
-    double bestValLoss = std::numeric_limits<double>::max();
-    // for (size_t e = 1; e <= MAX_EPOCHS; e++)
-    // {
-    //     Matrix preds = forward(data.X);
-    //     Matrix error = preds - data.Y;
-    //     backprop(error);
-    //     epochPrint(e, preds);
-
-    //     double currentValLoss = calcLoss(forward(data.valX), data.valY);
-    //     if (currentValLoss < bestValLoss) {
-    //         bestValLoss = currentValLoss;
-    //         wait = 0;
-    //     } else
-    //         wait++;
-        
-    //     if (wait >= patience)
-    //         break;
-    // }
+    double bestLoss = std::numeric_limits<double>::max();
+    t_metrics m;
+    m.classif = data.classif;
+    std::vector<Layer> bestLayers;
     for (size_t e = 1; e <= MAX_EPOCHS; e++)
     {
         for (size_t i = 0; i < data.X.size(); i += BATCH_SIZE)
@@ -149,17 +203,22 @@ void NN::fit()
             Matrix error = preds - batchY;
             backprop(error);
         }
-
-        epochPrint(e);
-        double currentValLoss = calcLoss(forward(data.valX), data.valY);
-        if (currentValLoss < bestValLoss) {
-            bestValLoss = currentValLoss;
+        calcMetrics(m);
+        epochPrint(e, m);
+        if (m.val_losses.back() < (bestLoss - TOLERANCE)) {
+            bestLoss = m.val_losses.back();
             wait = 0;
+            bestLayers = layers;
         } else
             wait++;
     
         if (wait >= patience)
             break;
+        data.shuffle();
     }
+    layers = bestLayers;
+    setMetrics(m);
     std::cout << RESET "\n";
+    metricPrint(m);
+    return m;
 }

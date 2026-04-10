@@ -19,17 +19,20 @@ class Layer;
 
 class NN {
 private:
-    const Dataset& data;
+    Dataset& data;
     std::vector<Layer> layers;
     void addOutputLayer();
-    double calcLoss(Matrix preds, Matrix actual);
-    void epochPrint(size_t e);
+    double calcLoss(const Matrix &preds, const Matrix &actual);
+    void epochPrint(size_t e, const t_metrics &m);
+    void metricPrint(const t_metrics &m);
+    void calcMetrics(t_metrics& m);
+    void setMetrics(t_metrics& m);
 
 public:
-    NN(const Dataset& data);
+    NN(Dataset& data);
 
     void addLayer(int num_nodes, Activation actType = Activation::SIGMOID);
-    void fit();
+    t_metrics fit();
     Matrix forward(Matrix passer);
     Matrix backprop(Matrix passer);
 };

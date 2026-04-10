@@ -39,19 +39,52 @@ using Row = std::vector<double>;
 using Matrix = std::vector<Row>;
 
 const double LR = 0.01;
-const int MAX_EPOCHS = 10000;
-const double EPSILON = 1e-8;
+const int MAX_EPOCHS = 1500;
 const double TRAIN_RATIO = 0.8;
 const int BATCH_SIZE = 32;
+const double TOLERANCE = 1e-6;
+const int MAX_NODES = 50;
 
 enum class Activation {
     SIGMOID,
     TANH,
     RELU,
+    LEAKY_RELU,
     SOFTMAX,
     LINEAR,
 };
 
+typedef struct s_metrics {
+    bool classif;
+
+    Row train_losses;
+    Row train_metrics;
+    Row val_losses;
+    Row val_metrics;
+
+    Matrix train_preds;
+    Matrix train_truth;
+    Matrix val_preds;
+    Matrix val_truth;
+
+    std::vector<std::vector<int>> confus;
+} t_metrics;
+
+struct AdamParams {
+    Matrix m;
+    Matrix v;
+    int t = 0;
+
+    double beta1 = 0.9;
+    double beta2 = 0.999;
+    double eps = 1e-8;
+
+    void init(int rows, int cols) {
+        m = Matrix(rows, Row(cols, 0.0));
+        v = Matrix(rows, Row(cols, 0.0));
+        t = 0;
+    }
+};
 
 Matrix initMatrix(size_t rows, size_t cols, double min, double max);
 bool checkRectangle(const Matrix& A, bool Square=false);
@@ -71,3 +104,6 @@ Matrix operator*(const Matrix& A, const Matrix& B);
 #include "Data.hpp"
 #include "Layer.hpp"
 #include "NN.hpp"
+
+void exportTrainingData(const t_metrics& m);
+void evaluateComplexity(Dataset& data);

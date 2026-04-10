@@ -26,7 +26,9 @@ int	main(int argc, char *argv[])
 		// net.addLayer(10, Activation::RELU);
 		net.addLayer(16, Activation::RELU);
 		net.addLayer(8, Activation::RELU);
-		net.fit();
+		t_metrics m = net.fit();
+		exportTrainingData(m);
+		evaluateComplexity(data);
 	}
 	catch (std::exception & e)
 	{

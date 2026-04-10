@@ -18,7 +18,6 @@ class Dataset {
 private:
     void parse(std::ifstream& file);
     void oneHotEncode();
-    void shuffle();
     void split();
 
 public:
@@ -36,4 +35,5 @@ public:
     Dataset(const std::string& file, bool classif=false);
     void normalize();
     void printStats();
+    void shuffle();
 };
