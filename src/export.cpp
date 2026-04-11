@@ -32,9 +32,11 @@ void exportTrainingData(const t_metrics& m) {
         cfFile.close();
     } else {
         std::ofstream regFile("graph.csv");
-        regFile << "truth,pred\n";
+        regFile << "truth,pred,set\n";
+        for (size_t i = 0; i < m.train_truth.size(); ++i)
+            regFile << m.train_truth[i][0] << "," << m.train_preds[i][0] << ",train\n";
         for (size_t i = 0; i < m.val_truth.size(); ++i)
-            regFile << m.val_truth[i][0] << "," << m.val_preds[i][0] << "\n";
+            regFile << m.val_truth[i][0] << "," << m.val_preds[i][0] << ",validation\n";
         regFile.close();
     }
     std::cout << "\n" << GREEN << "Metrics exported!" << RESET << std::endl;
@@ -42,20 +44,24 @@ void exportTrainingData(const t_metrics& m) {
 
 void evaluateComplexity(Dataset& data) {
     std::ofstream file("complexity.csv");
+    file << "activation,nodes,val_loss,val_metric\n";
 
-    file << "nodes,train_loss,val_loss,train_metric,val_metric\n";
-    for (int n = 1; n <= MAX_NODES; n++) {
-        std::cout << YELLOW << "Architecture Check: [" CYAN << n << YELLOW "] hidden nodes..." RESET "\n";
-        NN net(data);
-        net.addLayer(n, Activation::LEAKY_RELU);
-        t_metrics results = net.fit();
-    
-        file << n << "," 
-             << results.train_losses.back() << "," 
-             << results.val_losses.back()   << ","
-             << results.train_metrics.back() << "," 
-             << results.val_metrics.back()  << "\n";
+    std::vector<std::pair<Activation, std::string>> acts = {
+        {Activation::SIGMOID, "SIGMOID"},
+        {Activation::TANH, "TANH"},
+        {Activation::RELU, "RELU"},
+        {Activation::LEAKY_RELU, "LEAKY_RELU"}
+    };
+
+    for (auto& pair : acts) {
+        for (int n = 1; n <=MAX_NODES; n++) {
+            NN net(data);
+            net.addLayer(n, pair.first);
+            
+            t_metrics results = net.fit();
+            file << pair.second << "," << n << "," << results.val_losses.back() << "," << results.val_metrics.back() << "\n";
+        }
     }
     file.close();
-    std::cout << "\n" << GREEN << "Complexity report saved!" RESET "\n";
+    std::cout << "\n" << GREEN << "Multi-Activation Complexity report saved!" << RESET << std::endl;
 }

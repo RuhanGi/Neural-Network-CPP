@@ -76,5 +76,5 @@ re: fclean all
 
 gpush: fclean
 	git add .
-	git commit -m "metrics"
+	git commit -m "results"
 	git push

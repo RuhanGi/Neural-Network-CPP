@@ -62,6 +62,9 @@ void    Layer::act(Matrix &z)
                     case Activation::RELU:
                         z[i][j] = (z[i][j] > 0) ? z[i][j] : 0.0;
                         break;
+                    case Activation::LEAKY_RELU:
+                        z[i][j] = (z[i][j] > 0) ? z[i][j] : 0.01*z[i][j];
+                        break;
                     case Activation::SOFTMAX:
                         break;
                     case Activation::LINEAR:
@@ -96,6 +99,8 @@ double Layer::getDeriv(double a)
             return 1.0 - (a * a);
         case Activation::RELU:
             return (a > 0) ? 1.0 : 0.0;
+        case Activation::LEAKY_RELU:
+            return (a > 0) ? 1.0 : 0.01;
         case Activation::SOFTMAX:
             return 1.0;
         default:

@@ -151,12 +151,12 @@ void NN::calcMetrics(t_metrics& m)
     if (m.classif)
     {
         m.train_metrics.push_back(getAccuracy(train_preds, data.Y));
-        m.val_metrics.push_back(getAccuracy(train_preds, data.Y));
+        m.val_metrics.push_back(getAccuracy(val_preds, data.valY));
     }
     else
     {
         m.train_metrics.push_back(rSqr(train_preds, data.Y));
-        m.val_metrics.push_back(rSqr(train_preds, data.Y));
+        m.val_metrics.push_back(rSqr(val_preds, data.valY));
     }
 }
 
@@ -177,7 +177,7 @@ void NN::setMetrics(t_metrics& m)
     {
         m.train_preds = forward(data.X);
         m.train_truth = data.Y;
-        m.val_truth = data.X;
+        m.val_truth = data.valY;
     }
 }
 
@@ -191,7 +191,7 @@ t_metrics   NN::fit()
     double bestLoss = std::numeric_limits<double>::max();
     t_metrics m;
     m.classif = data.classif;
-    std::vector<Layer> bestLayers;
+    std::vector<Layer> bestLayers = layers;
     for (size_t e = 1; e <= MAX_EPOCHS; e++)
     {
         for (size_t i = 0; i < data.X.size(); i += BATCH_SIZE)

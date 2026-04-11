@@ -43,7 +43,7 @@ const int MAX_EPOCHS = 1500;
 const double TRAIN_RATIO = 0.8;
 const int BATCH_SIZE = 32;
 const double TOLERANCE = 1e-6;
-const int MAX_NODES = 50;
+const int MAX_NODES = 24;
 
 enum class Activation {
     SIGMOID,
